@@ -51,6 +51,9 @@ require('telescope').setup {
     find_files = {
       hidden = true,
     },
+    live_grep = {
+      hidden = true,
+    },
     colorscheme = {
       enable_preview = true,
     },
@@ -72,7 +75,6 @@ conform.formatters_by_ft = {
   typescript = { 'prettierd', 'prettier' },
   typescriptreact = { 'prettierd', 'prettier' },
   ruby = { 'rubocop' },
-  markdown = { 'markdownlint' },
   eruby = { 'erb_lint' },
 }
 conform.format_on_save = function(bufnr)
