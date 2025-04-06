@@ -13,8 +13,7 @@ vim.keymap.set('i', 'jk', '<Esc>')
 vim.keymap.set('n', '<leader>x', '<cmd>:qa!<cr>', { desc = 'Quit' })
 vim.keymap.set('n', '<leader>sc', require('telescope.builtin').commands, { desc = '[S]earch [C]ommands' })
 
-vim.keymap.set('n', '<leader>oc', '<cmd>e ~/.dotfiles/nvim/.config/nvim/lua/custom/plugins/init.lua<CR>',
-  { desc = 'Open Config' })
+vim.keymap.set('n', '<leader>oc', '<cmd>e ~/.dotfiles/nvim/.config/nvim/lua/custom/plugins/init.lua<CR>', { desc = 'Open Config' })
 vim.keymap.set('n', '<leader>ot', '<cmd>e ~/todo.txt<CR>', { desc = 'Open Todo' })
 
 vim.opt.spell = false
@@ -60,35 +59,93 @@ require('telescope').setup {
   },
 }
 
-local lint = require 'lint'
-lint.linters_by_ft = {
-  ruby = { 'ruby' },
-  dockerfile = { 'hadolint' },
-  typescript = { 'eslint_d' },
-  eruby = { 'erblint' },
-}
-
-local conform = require 'conform'
-conform.formatters_by_ft = {
-  javascript = { 'prettierd', 'prettier' },
-  javascriptreact = { 'prettierd', 'prettier' },
-  typescript = { 'prettierd', 'prettier' },
-  typescriptreact = { 'prettierd', 'prettier' },
-  ruby = { 'rubocop' },
-  eruby = { 'erb_lint' },
-}
-conform.format_on_save = function(bufnr)
-  -- Disable "format_on_save lsp_fallback" for languages that don't
-  -- have a well standardized coding style. You can add additional
-  -- languages here or re-enable it for the disabled ones.
-  local disable_filetypes = { c = true, cpp = true }
-  return {
-    timeout_ms = 5000,
-    lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
-  }
-end
-
 return {
+  {
+    'stevearc/conform.nvim',
+    opts = {},
+    config = function()
+      require('conform').setup {
+        formatters_by_ft = {
+          lua = { 'stylua' },
+          -- Conform will run multiple formatters sequentially
+          python = { 'isort', 'black' },
+          -- You can customize some of the format options for the filetype (:help conform.format)
+          rust = { 'rustfmt', lsp_format = 'fallback' },
+          -- Conform will run the first available formatter
+          javascript = { 'prettierd', 'prettier', stop_after_first = true },
+        },
+        format_on_save = {
+          lsp_fallback = true,
+          async = false,
+          timeout_ms = 500,
+        },
+      }
+      vim.api.nvim_create_autocmd('BufWritePre', {
+        pattern = '*',
+        callback = function(args)
+          require('conform').format { bufnr = args.buf }
+        end,
+      })
+    end,
+  },
+  { -- Linting
+    'mfussenegger/nvim-lint',
+    event = { 'BufReadPre', 'BufNewFile' },
+    config = function()
+      local lint = require 'lint'
+      lint.linters_by_ft = {
+        markdown = { 'marksman' },
+        typescript = { 'eslint_d' },
+      }
+
+      -- To allow other plugins to add linters to require('lint').linters_by_ft,
+      -- instead set linters_by_ft like this:
+      -- lint.linters_by_ft = lint.linters_by_ft or {}
+      -- lint.linters_by_ft['markdown'] = { 'markdownlint' }
+      --
+      -- However, note that this will enable a set of default linters,
+      -- which will cause errors unless these tools are available:
+      -- {
+      --   clojure = { "clj-kondo" },
+      --   dockerfile = { "hadolint" },
+      --   inko = { "inko" },
+      --   janet = { "janet" },
+      --   json = { "jsonlint" },
+      --   markdown = { "vale" },
+      --   rst = { "vale" },
+      --   ruby = { "ruby" },
+      --   terraform = { "tflint" },
+      --   text = { "vale" }
+      -- }
+      --
+      -- You can disable the default linters by setting their filetypes to nil:
+      -- lint.linters_by_ft['clojure'] = nil
+      -- lint.linters_by_ft['dockerfile'] = nil
+      -- lint.linters_by_ft['inko'] = nil
+      -- lint.linters_by_ft['janet'] = nil
+      -- lint.linters_by_ft['json'] = nil
+      -- lint.linters_by_ft['markdown'] = nil
+      -- lint.linters_by_ft['rst'] = nil
+      -- lint.linters_by_ft['ruby'] = nil
+      -- lint.linters_by_ft['terraform'] = nil
+      -- lint.linters_by_ft['text'] = nil
+
+      -- Create autocommand which carries out the actual linting
+      -- on the specified events.
+      local lint_augroup = vim.api.nvim_create_augroup('lint', { clear = true })
+      vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
+        group = lint_augroup,
+        callback = function()
+          -- Only run the linter in buffers that you can modify in order to
+          -- avoid superfluous noise, notably within the handy LSP pop-ups that
+          -- describe the hovered symbol using Markdown.
+          if vim.opt_local.modifiable:get() then
+            lint.try_lint()
+          end
+        end,
+      })
+    end,
+  },
   {
     'folke/tokyonight.nvim',
     lazy = false,
@@ -197,15 +254,15 @@ return {
         end
 
         require('telescope.pickers')
-            .new({}, {
-              prompt_title = 'Harpoon',
-              finder = require('telescope.finders').new_table {
-                results = file_paths,
-              },
-              previewer = conf.file_previewer {},
-              sorter = conf.generic_sorter {},
-            })
-            :find()
+          .new({}, {
+            prompt_title = 'Harpoon',
+            finder = require('telescope.finders').new_table {
+              results = file_paths,
+            },
+            previewer = conf.file_previewer {},
+            sorter = conf.generic_sorter {},
+          })
+          :find()
       end
 
       vim.keymap.set('n', '<leader>se', function()
@@ -227,7 +284,7 @@ return {
   },
   {
     'projekt0n/github-nvim-theme',
-    lazy = false,    -- make sure we load this during startup if it is your main colorscheme
+    lazy = false, -- make sure we load this during startup if it is your main colorscheme
     priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
       require('github-theme').setup {
@@ -331,10 +388,10 @@ return {
     end,
     keys = {
       { '<C-t>n', ':TestNearest<cr>', { desc = 'Test Nearest' } },
-      { '<C-t>f', ':TestFile<cr>',    { desc = 'Test File' } },
-      { '<C-t>s', ':TestSuite<cr>',   { desc = 'Test Suite' } },
-      { '<C-t>l', ':TestLast<cr>',    { desc = 'Test Last' } },
-      { '<C-t>v', ':TestVisit<cr>',   { desc = 'TestVist' } },
+      { '<C-t>f', ':TestFile<cr>', { desc = 'Test File' } },
+      { '<C-t>s', ':TestSuite<cr>', { desc = 'Test Suite' } },
+      { '<C-t>l', ':TestLast<cr>', { desc = 'Test Last' } },
+      { '<C-t>v', ':TestVisit<cr>', { desc = 'TestVist' } },
     },
   },
   { 'EdenEast/nightfox.nvim' },
@@ -388,8 +445,8 @@ return {
       provider = 'claude',
       openai = {
         endpoint = 'https://api.openai.com/v1',
-        model = 'gpt-4o',  -- your desired model (or use gpt-4o, etc.)
-        timeout = 30000,   -- Timeout in milliseconds, increase this for reasoning models
+        model = 'gpt-4o', -- your desired model (or use gpt-4o, etc.)
+        timeout = 30000, -- Timeout in milliseconds, increase this for reasoning models
         temperature = 0,
         max_tokens = 8192, -- Increase this to include reasoning tokens (for reasoning models)
         --reasoning_effort = "medium", -- low|medium|high, only used for reasoning models
@@ -404,12 +461,12 @@ return {
       'nvim-lua/plenary.nvim',
       'MunifTanjim/nui.nvim',
       --- The below dependencies are optional,
-      'echasnovski/mini.pick',         -- for file_selector provider mini.pick
+      'echasnovski/mini.pick', -- for file_selector provider mini.pick
       'nvim-telescope/telescope.nvim', -- for file_selector provider telescope
-      'hrsh7th/nvim-cmp',              -- autocompletion for avante commands and mentions
-      'ibhagwan/fzf-lua',              -- for file_selector provider fzf
-      'nvim-tree/nvim-web-devicons',   -- or echasnovski/mini.icons
-      'zbirenbaum/copilot.lua',        -- for providers='copilot'
+      'hrsh7th/nvim-cmp', -- autocompletion for avante commands and mentions
+      'ibhagwan/fzf-lua', -- for file_selector provider fzf
+      'nvim-tree/nvim-web-devicons', -- or echasnovski/mini.icons
+      'zbirenbaum/copilot.lua', -- for providers='copilot'
       {
         -- support for image pasting
         'HakonHarnes/img-clip.nvim',
