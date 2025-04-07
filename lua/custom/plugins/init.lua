@@ -497,6 +497,65 @@ return {
     },
   },
   {
+    'rebelot/kanagawa.nvim',
+    lazy = false,
+    priority = 1000,
+  },
+  { 'bluz71/vim-moonfly-colors', name = 'moonfly', lazy = false, priority = 1000 },
+  {
+    'nyoom-engineering/oxocarbon.nvim',
+    lazy = false,
+    priority = 1000,
+    -- Add in any other configuration;
+    --   event = foo,
+    --   config = bar
+    --   end,
+  },
+  {
+    'tpope/vim-dadbod',
+    dependencies = {
+      'kristijanhusak/vim-dadbod-ui',
+      'kristijanhusak/vim-dadbod-completion',
+    },
+    opts = {
+      db_competion = function()
+        ---@diagnostic disable-next-line
+        require('cmp').setup.buffer { sources = { { name = 'vim-dadbod-completion' } } }
+      end,
+    },
+    config = function(_, opts)
+      vim.g.db_ui_save_location = vim.fn.stdpath 'config' .. require('plenary.path').path.sep .. 'db_ui'
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = {
+          'sql',
+        },
+        command = [[setlocal omnifunc=vim_dadbod_completion#omni]],
+      })
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = {
+          'sql',
+          'mysql',
+          'plsql',
+        },
+        callback = function()
+          vim.schedule(opts.db_completion)
+        end,
+      })
+    end,
+    keys = {
+      { '<leader>dt', '<cmd>DBUIToggle<cr>', desc = 'toggle ui' },
+      { '<leader>df', '<cmd>DBUIFindBuffer<cr>', desc = 'find buffer' },
+      { '<leader>dr', '<cmd>DBUIRenameBuffer<cr>', desc = 'rename buffer' },
+      { '<leader>dq', '<cmd>DBUILastQueryInfo<cr>', desc = 'last query ' },
+    },
+  },
+  {
+    'rose-pine/neovim',
+    name = 'rose-pine',
+    lazy = false,
+    priority = 1000,
+  },
+  {
     'sainnhe/everforest',
     lazy = false,
     priority = 1000,
