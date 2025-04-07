@@ -73,6 +73,7 @@ return {
           rust = { 'rustfmt', lsp_format = 'fallback' },
           -- Conform will run the first available formatter
           javascript = { 'prettierd', 'prettier', stop_after_first = true },
+          typescript = { 'prettierd', 'prettier', stop_after_first = true },
         },
         format_on_save = {
           lsp_fallback = true,
@@ -94,7 +95,7 @@ return {
     config = function()
       local lint = require 'lint'
       lint.linters_by_ft = {
-        markdown = { 'marksman' },
+        markdown = { 'vale' },
         typescript = { 'eslint_d' },
       }
 
@@ -423,6 +424,7 @@ return {
         transparent = false,
         -- Options will go here
       }
+      vim.cmd.colorscheme 'cyberdream-light'
     end,
   },
   {
